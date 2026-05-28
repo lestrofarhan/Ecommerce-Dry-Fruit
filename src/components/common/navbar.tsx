@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 
 const navigationItems = [
   { label: "Home", href: "/" },
-  { label: "Product", href: "/products" },
+  { label: "Product", href: "/shop" },
   { label: "About Us", href: "/about-us" },
-  { label: "Contact Us", href: "/contact" },
+  { label: "Contact Us", href: "/contact-us" },
 ];
 
 function UserIcon() {
@@ -59,9 +59,9 @@ export function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-5 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="font-serif  text-3xl font-black uppercase tracking-tight text-black sm:text-4xl"
+          className="font-serif  text-3xl font-black uppercase tracking-tight [word-spacing:10px] text-black sm:text-4xl"
         >
-          Pure Provenance
+          Healthy Basket
         </Link>
 
         <nav
@@ -96,14 +96,18 @@ export function Navbar() {
             aria-label="Account"
             className="transition-opacity hover:opacity-70"
           >
-            <UserIcon />
+            <Link href="/account/orders">
+              <UserIcon />
+            </Link>
           </button>
           <button
             type="button"
             aria-label="Cart"
             className="transition-opacity hover:opacity-70"
           >
-            <CartIcon />
+            <Link href="/cart">
+              <CartIcon />
+            </Link>
           </button>
         </div>
       </div>

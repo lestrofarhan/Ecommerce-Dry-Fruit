@@ -12,7 +12,7 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     quote:
-      "The quality of the Shilajeet is unparalleled. I've tried many sources, but Pure Provenance offers a level of potency and clarity that is truly exceptional.",
+      "The quality of the Shilajeet is unparalleled. I've tried many sources, but Healthy Basket offers a level of potency and clarity that is truly exceptional.",
     author: "DR. ELENA VANCE",
     role: "WELLNESS PRACTITIONER",
   },

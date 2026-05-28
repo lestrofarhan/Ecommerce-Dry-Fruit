@@ -71,8 +71,8 @@ function MailIcon() {
 export function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-black/10 bg-[#eee7e4] text-black">
-      <div className="absolute inset-x-0 bottom-[-5rem] select-none text-center font-serif text-[clamp(3rem,14vw,9rem)] font-black uppercase tracking-[-0.08em] text-black/8">
-        Pure Provenance
+      <div className="absolute inset-x-0 bottom-[-5rem] select-none text-center font-serif [word-spacing:20px] text-[clamp(3rem,14vw,9rem)] font-black uppercase tracking-[-0.08em] text-black/8">
+        Healthy Basket
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 py-8 mb-25 sm:px-6 lg:px-8 lg:py-10">
@@ -160,7 +160,7 @@ export function Footer() {
               </a>
             </div>
             <p className="mt-5 max-w-[14rem] text-xs uppercase tracking-[0.14em] text-black/80 sm:text-sm">
-              © 2024 Pure Provenance. Sustainably sourced.
+              © 2024 Healthy Basket. Sustainably sourced.
             </p>
           </div>
         </div>
