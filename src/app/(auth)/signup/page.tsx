@@ -4,20 +4,77 @@
 import { FormEvent, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Award, Leaf, Globe } from "lucide-react";
+import axiosInstance from "@/lib/axios";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     email: "",
-    phone: "",
     password: "",
     agreeToTerms: false,
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // Execute account creation / database insertion logic here
+    setError("");
+    setSuccess("");
+
+    // Validate form
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+      setError("All fields are required!");
+      return;
+    }
+
+    if (!formData.agreeToTerms) {
+      setError("Please agree to the Terms of Service and Privacy Policy");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await axiosInstance.post("/auth/signup", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (response.data.success) {
+        setSuccess("Account created successfully! Redirecting to login...");
+        // Reset form
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          password: "",
+          agreeToTerms: false,
+        });
+        // Redirect to login after 2 seconds
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      }
+    } catch (err: unknown) {
+      let errorMessage = "An error occurred during signup";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const apiError = err as { response?: { data?: { message?: string } } };
+        errorMessage = apiError.response?.data?.message || errorMessage;
+      }
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,24 +120,37 @@ export default function SignupPage() {
             </header>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Success Message */}
+              {success && (
+                <div className="p-3 bg-green-100 border border-green-300 rounded text-green-700 text-sm">
+                  {success}
+                </div>
+              )}
               {[
                 {
-                  label: "Full Name",
+                  label: "First Name",
                   type: "text",
-                  key: "fullName",
-                  placeholder: "Alexander Vance",
+                  key: "firstName",
+                  placeholder: "Alexander",
+                },
+                {
+                  label: "Last Name",
+                  type: "text",
+                  key: "lastName",
+                  placeholder: "Vance",
                 },
                 {
                   label: "Email Address",
                   type: "email",
                   key: "email",
                   placeholder: "alex@domain.com",
-                },
-                {
-                  label: "Phone Number",
-                  type: "tel",
-                  key: "phone",
-                  placeholder: "+1 (555) 000-0000",
                 },
                 {
                   label: "Password",
@@ -99,12 +169,13 @@ export default function SignupPage() {
                   <input
                     type={field.type}
                     required
+                    disabled={loading}
                     placeholder={field.placeholder}
-                    value={(formData as any)[field.key]}
+                    value={String(formData[field.key as keyof typeof formData])}
                     onChange={(e) =>
                       setFormData({ ...formData, [field.key]: e.target.value })
                     }
-                    className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none"
+                    className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               ))}
@@ -114,11 +185,12 @@ export default function SignupPage() {
                 <input
                   type="checkbox"
                   required
+                  disabled={loading}
                   checked={formData.agreeToTerms}
                   onChange={(e) =>
                     setFormData({ ...formData, agreeToTerms: e.target.checked })
                   }
-                  className="mt-0.5 w-3.5 h-3.5 rounded border-zinc-300 bg-white text-amber-800 accent-[#413126] focus:ring-0 cursor-pointer"
+                  className="mt-0.5 w-3.5 h-3.5 rounded border-zinc-300 bg-white text-amber-800 accent-[#413126] focus:ring-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span>
                   I agree to the{" "}
@@ -139,9 +211,10 @@ export default function SignupPage() {
               {/* Submit Registration Button */}
               <button
                 type="submit"
-                className="w-full mt-4 py-4 bg-[#413126] text-white text-xs font-semibold uppercase tracking-widest rounded-sm hover:bg-[#534033] transition-colors duration-300 flex items-center justify-center gap-2"
+                disabled={loading}
+                className="w-full mt-4 py-4 bg-[#413126] text-white text-xs font-semibold uppercase tracking-widest rounded-sm hover:bg-[#534033] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Account <span>→</span>
+                {loading ? "Creating Account..." : "Create Account"} {!loading && <span>→</span>}
               </button>
             </form>
 

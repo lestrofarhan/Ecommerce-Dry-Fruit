@@ -4,14 +4,69 @@
 import { FormEvent, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import axiosInstance from "@/lib/axios";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // Execute server-side sign-in pipeline actions here
+    setError("");
+    setSuccess("");
+
+    // Validation
+    if (!email || !password) {
+      setError("Email and password are required!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await axiosInstance.post("/auth", {
+        email,
+        password,
+      });
+
+      if (response.data.success) {
+        // Save token to localStorage
+        localStorage.setItem("authToken", response.data.token);
+        
+        // Save user data (optional)
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        
+        setSuccess("Login successful! Redirecting...");
+        
+        // Reset form
+        setEmail("");
+        setPassword("");
+        
+        // Redirect to home page after 1 second
+        setTimeout(() => {
+          router.push("/");
+        }, 1000);
+      }
+    } catch (err: unknown) {
+      let errorMessage = "An error occurred during login";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const apiError = err as {
+          response?: { data?: { message?: string } };
+        };
+        errorMessage = apiError.response?.data?.message || errorMessage;
+      }
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,6 +98,20 @@ export default function LoginPage() {
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div className="p-3 bg-green-100 border border-green-300 rounded text-green-700 text-sm">
+                {success}
+              </div>
+            )}
+
             {/* Email Field Group */}
             <div className="flex flex-col border-b border-zinc-300 py-2 focus-within:border-zinc-800 transition-colors duration-200">
               <label className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase mb-1">
@@ -51,10 +120,11 @@ export default function LoginPage() {
               <input
                 type="email"
                 required
+                disabled={loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none"
+                className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -74,19 +144,21 @@ export default function LoginPage() {
               <input
                 type="password"
                 required
+                disabled={loading}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 tracking-widest focus:outline-none"
+                className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 tracking-widest focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             {/* Action Form Submit Button */}
             <button
               type="submit"
-              className="w-full mt-4 py-4 bg-[#413126] text-white text-xs font-semibold uppercase tracking-widest rounded-sm hover:bg-[#534033] transition-colors duration-300 flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full mt-4 py-4 bg-[#413126] text-white text-xs font-semibold uppercase tracking-widest rounded-sm hover:bg-[#534033] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign In <span>→</span>
+              {loading ? "Signing In..." : "Sign In"} {!loading && <span>→</span>}
             </button>
           </form>
 
