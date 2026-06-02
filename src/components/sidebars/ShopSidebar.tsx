@@ -1,17 +1,53 @@
 // components/shop/ShopSidebar.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
+import { productService } from "@/services/productService";
 
-export default function ShopSidebar() {
+interface ShopSidebarProps {
+  onCategoryChange?: (category: string | null) => void;
+  onPriceChange?: (price: number) => void;
+  selectedCategory?: string | null;
+}
+
+export default function ShopSidebar({
+  onCategoryChange,
+  onPriceChange,
+  selectedCategory,
+}: ShopSidebarProps) {
   const [priceRange, setPriceRange] = useState<number>(500);
-  const categories = [
-    "Raw Shilajeet",
-    "Cold Pressed Oils",
-    "Sun-Dried Fruits",
-    "Artisanal Honey",
-  ];
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await productService.getCategories();
+        if (response.success) {
+          setCategories(response.categories);
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+        setError("Failed to load categories");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleCategoryChange = (category: string) => {
+    onCategoryChange?.(selectedCategory === category ? null : category);
+  };
+
+  const handlePriceChange = (value: number) => {
+    setPriceRange(value);
+    onPriceChange?.(value);
+  };
 
   return (
     <div className="space-y-8 sticky top-6">
@@ -20,23 +56,32 @@ export default function ShopSidebar() {
         <h4 className="text-[11px] font-bold tracking-[0.15em] uppercase text-zinc-400 mb-4">
           Categories
         </h4>
-        <div className="space-y-3">
-          {categories.map((cat, idx) => (
-            <label
-              key={idx}
-              className="flex items-center gap-3 text-xs font-medium text-zinc-700 cursor-pointer select-none group"
-            >
-              <input
-                type="checkbox"
-                defaultChecked={idx === 1} // Setting 'Cold Pressed Oils' checked by default like the mockup
-                className="w-4 h-4 rounded border-zinc-300 bg-white text-emerald-600 focus:ring-0 accent-emerald-700 cursor-pointer"
-              />
-              <span className="group-hover:text-zinc-900 transition-colors">
-                {cat}
-              </span>
-            </label>
-          ))}
-        </div>
+        {loading ? (
+          <p className="text-xs text-zinc-500">Loading...</p>
+        ) : error ? (
+          <p className="text-xs text-red-500">{error}</p>
+        ) : categories.length > 0 ? (
+          <div className="space-y-3">
+            {categories.map((cat) => (
+              <label
+                key={cat}
+                className="flex items-center gap-3 text-xs font-medium text-zinc-700 cursor-pointer select-none group"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCategory === cat}
+                  onChange={() => handleCategoryChange(cat)}
+                  className="w-4 h-4 rounded border-zinc-300 bg-white text-emerald-600 focus:ring-0 accent-emerald-700 cursor-pointer"
+                />
+                <span className="group-hover:text-zinc-900 transition-colors">
+                  {cat}
+                </span>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-500">No categories available</p>
+        )}
       </div>
 
       {/* Price Range Slider Tool */}
@@ -49,7 +94,7 @@ export default function ShopSidebar() {
           min="20"
           max="500"
           value={priceRange}
-          onChange={(e) => setPriceRange(Number(e.target.value))}
+          onChange={(e) => handlePriceChange(Number(e.target.value))}
           className="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-800"
         />
         <div className="flex justify-between items-center text-[11px] text-zinc-500 font-medium mt-2">
