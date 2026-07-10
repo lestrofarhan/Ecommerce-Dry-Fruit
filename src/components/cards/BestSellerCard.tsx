@@ -31,7 +31,7 @@ export default function BestSellerCard({
 
   return (
     <Link
-      href={`/product/${id}`}
+      href={`/shop/${id}`}
       className="group bg-[#fffdfa] rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 ease-out flex flex-col border border-zinc-100/50"
     >
       {/* Image Container with Badges */}

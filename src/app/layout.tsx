@@ -2,6 +2,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { inter } from "../fonts"; // Adjusted based on your path configuration
+import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "Ecommerce Dry Fruits",
@@ -23,8 +25,9 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-[#fcf9f6]"
         suppressHydrationWarning
       >
-        {/* If you add dynamic providers (e.g., ThemeProvider, CartProvider), wrap {children} here */}
-        {children}
+        <AuthProvider>
+        <CartProvider>{children}</CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

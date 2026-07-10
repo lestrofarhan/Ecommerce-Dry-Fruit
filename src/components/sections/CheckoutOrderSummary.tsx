@@ -1,10 +1,9 @@
-// components/checkout/order-summary.tsx
 import Image from "next/image";
 import { ShieldCheck, Leaf, Award } from "lucide-react";
 
 export interface CheckoutProduct {
   name: string;
-  variant: string;
+  variant?: string;
   quantity: number;
   price: number;
   imageSrc: string;
@@ -13,9 +12,14 @@ export interface CheckoutProduct {
 interface OrderSummaryProps {
   items: CheckoutProduct[];
   subtotal: number;
+  isSubmitting: boolean; // Added to manage button state internally
 }
 
-export function OrderSummary({ items, subtotal }: OrderSummaryProps) {
+export function OrderSummary({
+  items,
+  subtotal,
+  isSubmitting,
+}: OrderSummaryProps) {
   return (
     <div className="bg-[#f5efe9]/70 rounded-xl p-6 sm:p-8 border border-zinc-200/40 sticky top-6 flex flex-col justify-between">
       <div>
@@ -44,12 +48,13 @@ export function OrderSummary({ items, subtotal }: OrderSummaryProps) {
                     {item.name}
                   </h4>
                   <p className="text-[10px] text-zinc-400 font-light mt-0.5">
-                    {item.variant} • QTY: {item.quantity}
+                    {item.variant ? `${item.variant} • ` : ""}QTY:{" "}
+                    {item.quantity}
                   </p>
                 </div>
               </div>
-              <span className="text-xs font-medium text-zinc-700">
-                ${item.price.toFixed(2)}
+              <span className="text-xs font-medium text-zinc-700 shrink-0">
+                PKR {(item.price * item.quantity).toLocaleString()}
               </span>
             </div>
           ))}
@@ -59,7 +64,7 @@ export function OrderSummary({ items, subtotal }: OrderSummaryProps) {
           <div className="flex justify-between">
             <span>Subtotal</span>
             <span className="font-medium text-zinc-900">
-              ${subtotal.toFixed(2)}
+              PKR {subtotal.toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between items-center">
@@ -73,17 +78,21 @@ export function OrderSummary({ items, subtotal }: OrderSummaryProps) {
         <div className="flex justify-between items-baseline pt-5 mb-8">
           <span className="font-serif text-base text-zinc-950">Total</span>
           <span className="font-serif text-xl font-semibold text-zinc-950">
-            ${subtotal.toFixed(2)}
+            PKR {subtotal.toLocaleString()}
           </span>
         </div>
       </div>
 
       <div>
+        {/* Single Form Submit Button */}
         <button
           type="submit"
-          className="w-full py-4 bg-[#312117] hover:bg-[#432f22] text-white text-xs font-semibold uppercase tracking-widest rounded-md shadow-md transition-all duration-200 active:scale-99 mb-6"
+          disabled={isSubmitting || items.length === 0}
+          className="w-full py-4 bg-[#312117] hover:bg-[#432f22] cursor-pointer text-white text-xs font-semibold uppercase tracking-widest rounded-md shadow-md transition-all duration-200 active:scale-[0.99] mb-6 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          Complete Purchase —
+          {isSubmitting
+            ? "Processing..."
+            : `Place Order`}
         </button>
 
         <div className="flex justify-between items-center px-2 pt-2 border-t border-zinc-200/60 text-zinc-400 text-[8px] font-bold uppercase tracking-widest">

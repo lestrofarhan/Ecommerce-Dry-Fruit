@@ -69,9 +69,12 @@ function MailIcon() {
 }
 
 export function Footer() {
+  // Dynamically fetches the current year using new Date()
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="relative overflow-hidden border-t border-black/10 bg-[#eee7e4] text-black">
-      <div className="absolute inset-x-0 bottom-[-5rem] select-none text-center font-serif [word-spacing:20px] text-[clamp(3rem,14vw,9rem)] font-black uppercase tracking-[-0.08em] text-black/8">
+      <div className="absolute left-1/2 bottom-[-2rem] sm:bottom-[-3.5rem] lg:bottom-[-5rem] -translate-x-1/2 select-none text-center whitespace-nowrap font-serif [word-spacing:20px] text-[clamp(3rem,14vw,9rem)] font-black uppercase tracking-[-0.08em] text-black/8">
         Healthy Basket
       </div>
 
@@ -82,9 +85,9 @@ export function Footer() {
               href="/"
               className="font-serif text-3xl font-black uppercase leading-none tracking-tight sm:text-[2.65rem]"
             >
-              Pure
+              Healthy
               <br />
-              Provenance
+              Basket
             </Link>
             <p className="mt-5 max-w-xs text-[0.95rem] leading-6 text-black/70 sm:text-[1rem]">
               Curating the world&apos;s most pristine organic provisions with a
@@ -159,8 +162,9 @@ export function Footer() {
                 <MailIcon />
               </a>
             </div>
+            {/* Displaying dynamic year here */}
             <p className="mt-5 max-w-[14rem] text-xs uppercase tracking-[0.14em] text-black/80 sm:text-sm">
-              © 2024 Healthy Basket. Sustainably sourced.
+              © {currentYear} Healthy Basket. Sustainably sourced.
             </p>
           </div>
         </div>

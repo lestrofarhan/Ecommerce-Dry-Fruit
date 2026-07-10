@@ -1,4 +1,3 @@
-// app/(shop)/account/layout.tsx
 import { AccountSidebar } from "@/components/sidebars/AccountSidebar";
 
 export default function AccountDashboardLayout({
@@ -11,11 +10,10 @@ export default function AccountDashboardLayout({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-16 items-start">
           <div className="md:col-span-3 lg:col-span-3">
-            <AccountSidebar userName="Julian" tier="Gold Tier Member" />
+            <AccountSidebar />
           </div>
           <div className="md:col-span-9 lg:col-span-9">
-            {children}{" "}
-            {/* This dynamically drops in the content of whatever sub-route you're on! */}
+            {children}
           </div>
         </div>
       </div>

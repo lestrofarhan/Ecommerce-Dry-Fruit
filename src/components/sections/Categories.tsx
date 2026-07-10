@@ -5,20 +5,22 @@ const CATEGORIES: CategoryCardProps[] = [
   {
     title: "Dry Fruits",
     subtitle: "Explore Variety",
-    imageSrc: "/category-img-1.png", // Replace with your image
-    href: "/category/dry-fruits",
+    imageSrc: "/category-img-1.png",
+    // Encodes space safely to /shop?category=Dry%20Fruits
+    href: `/shop?category=${encodeURIComponent("Dry Fruits")}`,
   },
   {
     title: "Essential Oils",
     subtitle: "Browse Collection",
-    imageSrc: "/category-img-2.png", // Replace with your image
-    href: "/category/essential-oils",
+    imageSrc: "/category-img-2.png",
+    // Maps seamlessly to the "Oils" category token expected by your shop sidebar
+    href: `/shop?category=${encodeURIComponent("Oils")}`,
   },
   {
     title: "Shilajeet",
     subtitle: "Ancient Energy",
-    imageSrc: "/category-img-3.png", // Replace with your image
-    href: "/category/shilajeet",
+    imageSrc: "/category-img-3.png",
+    href: `/shop?category=${encodeURIComponent("Shilajeet")}`,
   },
 ];
 

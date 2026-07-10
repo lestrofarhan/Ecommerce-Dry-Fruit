@@ -1,7 +1,12 @@
 // components/NewsletterBanner.tsx
 "use client";
 
-import { FormEvent, useState } from "react";
+// Explicitly importing FormEvent fixes the deprecation/linting warning
+import { type FormEvent, useState } from "react";
+
+// Deployed Google Apps Script Web App URL
+const WEB_APP_URL =
+  "https://script.google.com/macros/s/AKfycbxZ5gYxs9h3FwdBICTNlCi2E8RgwtqPVEOuBpmk2bEeKERLQG9eiUH6BFV2Zw0PaDwp/exec";
 
 export default function NewsletterBanner() {
   const [email, setEmail] = useState<string>("");
@@ -15,12 +20,21 @@ export default function NewsletterBanner() {
 
     setStatus("loading");
 
-    // Simulate API pipeline latency
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors", // Required to bypass CORS parameters with Apps Script redirects
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      // Because mode is 'no-cors', if the pipeline completes without throwing, it was successful.
       setStatus("success");
       setEmail("");
-    } catch {
+    } catch (error) {
+      console.error("Subscription pipeline error:", error);
       setStatus("error");
     }
   };
@@ -75,6 +89,13 @@ export default function NewsletterBanner() {
               <p className="text-xs text-emerald-400 mt-3 font-medium tracking-wide animate-fade-in">
                 Thank you! You have been successfully added to our inner circle
                 updates.
+              </p>
+            )}
+
+            {status === "error" && (
+              <p className="text-xs text-rose-400 mt-3 font-medium tracking-wide">
+                Something went wrong. Please check your network connection and
+                try again.
               </p>
             )}
           </div>

@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
+// Import authentication tracking context elements
+import { useAuth } from "@/context/AuthContext";
+import { useEffect, useRef, useState } from "react";
 
 const navigationItems = [
   { label: "Home", href: "/" },
@@ -53,13 +57,36 @@ function CartIcon() {
 
 export function Navbar() {
   const pathname = usePathname() || "/";
+  const router = useRouter();
+  const { totalItems, cartIconRef, lastAdded } = useCart();
+  const { isAuthenticated } = useAuth();
+  const [pulse, setPulse] = useState(false);
+
+  // Trigger pulse animation whenever a new item is added
+  useEffect(() => {
+    if (lastAdded !== null) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 600);
+      return () => clearTimeout(t);
+    }
+  }, [lastAdded]);
+
+  // Handle protected account navigation route state gating with deep redirect matching
+  const handleAccountClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      router.push(`/login?redirect=/account/orders`);
+    } else {
+      router.push("/account/orders");
+    }
+  };
 
   return (
     <header className="border-b border-black/10 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-5 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="font-serif  text-3xl font-black uppercase tracking-tight [word-spacing:10px] text-black sm:text-4xl"
+          className="font-serif text-3xl font-black uppercase tracking-tight [word-spacing:10px] text-black sm:text-4xl"
         >
           Healthy Basket
         </Link>
@@ -93,24 +120,58 @@ export function Navbar() {
         <div className="flex items-center gap-4 text-black">
           <button
             type="button"
+            onClick={handleAccountClick}
             aria-label="Account"
-            className="transition-opacity hover:opacity-70"
+            className="transition-opacity hover:opacity-70 cursor-pointer"
           >
-            <Link href="/account/orders">
-              <UserIcon />
-            </Link>
+            <UserIcon />
           </button>
-          <button
-            type="button"
-            aria-label="Cart"
-            className="transition-opacity hover:opacity-70"
-          >
-            <Link href="/cart">
+
+          {/* Cart button with badge */}
+          <Link href="/cart" aria-label={`Cart (${totalItems} items)`}>
+            {/* This div is the ref target for the fly-to animation */}
+            <div
+              ref={cartIconRef}
+              className="relative transition-opacity hover:opacity-70"
+            >
               <CartIcon />
-            </Link>
-          </button>
+              {totalItems > 0 && (
+                <span
+                  key={totalItems} // re-mount to retrigger scale animation on count change
+                  className={`
+                    absolute -top-2 -right-2.5
+                    min-w-[18px] h-[18px] px-1
+                    flex items-center justify-center
+                    rounded-full
+                    bg-[#312117] text-white
+                    text-[10px] font-bold leading-none
+                    select-none
+                    ${pulse ? "animate-cart-pop" : ""}
+                  `}
+                  style={{
+                    animation: pulse
+                      ? "cartPop 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both"
+                      : undefined,
+                  }}
+                >
+                  {totalItems > 99 ? "99+" : totalItems}
+                </span>
+              )}
+            </div>
+          </Link>
         </div>
       </div>
+
+      {/* Keyframes injected inline for the pop animation */}
+      <style>{`
+        @keyframes cartPop {
+          0%   { transform: scale(1); }
+          30%  { transform: scale(1.5); }
+          55%  { transform: scale(0.85); }
+          75%  { transform: scale(1.15); }
+          100% { transform: scale(1); }
+        }
+      `}</style>
     </header>
   );
 }

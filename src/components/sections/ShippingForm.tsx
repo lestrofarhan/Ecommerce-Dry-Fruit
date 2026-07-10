@@ -4,6 +4,7 @@ interface ShippingData {
   address: string;
   city: string;
   zipCode: string;
+  phone: string; // Added to match checkout page state and mongoose model
 }
 
 interface ShippingFormProps {
@@ -80,6 +81,21 @@ export function ShippingForm({ data, onChange }: ShippingFormProps) {
             placeholder="94103"
             value={data.zipCode}
             onChange={(e) => updateField("zipCode", e.target.value)}
+            className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none"
+          />
+        </div>
+
+        {/* Added Phone Input Field to match the required Mongoose field */}
+        <div className="sm:col-span-2 flex flex-col border-b border-zinc-300 py-1.5 focus-within:border-zinc-800 transition-colors">
+          <label className="text-[9px] font-bold tracking-widest text-zinc-400 uppercase mb-0.5">
+            Phone Number
+          </label>
+          <input
+            type="tel"
+            required
+            placeholder="+1 (555) 000-0000"
+            value={data.phone || ""}
+            onChange={(e) => updateField("phone", e.target.value)}
             className="w-full bg-transparent text-sm text-zinc-800 placeholder-zinc-300 focus:outline-none"
           />
         </div>

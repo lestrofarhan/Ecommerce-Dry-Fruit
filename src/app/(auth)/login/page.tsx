@@ -1,14 +1,21 @@
-// app/(auth)/login/page.tsx
 "use client";
 
 import { FormEvent, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import axiosInstance from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { login } = useAuth();
+  const searchParams = useSearchParams();
+
+  const currentRedirect = searchParams.get("redirect");
+  const signupUrl = currentRedirect
+    ? `/signup?redirect=${encodeURIComponent(currentRedirect)}`
+    : "/signup";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +27,6 @@ export default function LoginPage() {
     setError("");
     setSuccess("");
 
-    // Validation
     if (!email || !password) {
       setError("Email and password are required!");
       return;
@@ -29,27 +35,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await axiosInstance.post("/auth", {
-        email,
-        password,
-      });
+      const response = await axiosInstance.post("/auth", { email, password });
 
       if (response.data.success) {
-        // Save token to localStorage
-        localStorage.setItem("authToken", response.data.token);
-        
-        // Save user data (optional)
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-        
         setSuccess("Login successful! Redirecting...");
-        
-        // Reset form
         setEmail("");
         setPassword("");
-        
-        // Redirect to home page after 1 second
+
         setTimeout(() => {
-          router.push("/");
+          const { token, user } = response.data;
+          login(token, user, 7);
         }, 1000);
       }
     } catch (err: unknown) {
@@ -58,9 +53,7 @@ export default function LoginPage() {
         errorMessage = err.message;
       }
       if (typeof err === "object" && err !== null && "response" in err) {
-        const apiError = err as {
-          response?: { data?: { message?: string } };
-        };
+        const apiError = err as { response?: { data?: { message?: string } } };
         errorMessage = apiError.response?.data?.message || errorMessage;
       }
       setError(errorMessage);
@@ -69,23 +62,31 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleAuth = () => {
+    const backendUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+    const redirectParam = currentRedirect
+      ? `?redirect=${encodeURIComponent(currentRedirect)}`
+      : "";
+    window.location.href = `${backendUrl}/auth/google${redirectParam}`;
+  };
+
   return (
     <main className="w-full min-h-screen grid grid-cols-1 md:grid-cols-2">
-      {/* Left Column: Ambient Product Splash Banner */}
+      {/* Left Column Image Splash */}
       <div className="relative hidden md:block bg-[#a28671]">
         <Image
-          src="/login-img.png" // Path to your dates image
+          src="/login-img.png"
           alt="Premium dates and organic ingredients curated in a dark wooden bowl"
           fill
           priority
           sizes="50vw"
           className="object-cover mix-blend-multiply opacity-90"
         />
-        {/* Soft edge vignette mask */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/10 to-transparent" />
       </div>
 
-      {/* Right Column: Clean Auth Input Board */}
+      {/* Right Column Form Pane */}
       <div className="flex flex-col justify-center px-8 sm:px-16 lg:px-24 xl:px-32 bg-[#fcf9f6]">
         <div className="max-w-md w-full mx-auto">
           <header className="mb-10">
@@ -98,21 +99,17 @@ export default function LoginPage() {
           </header>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Error Message */}
             {error && (
               <div className="p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
                 {error}
               </div>
             )}
-
-            {/* Success Message */}
             {success && (
               <div className="p-3 bg-green-100 border border-green-300 rounded text-green-700 text-sm">
                 {success}
               </div>
             )}
 
-            {/* Email Field Group */}
             <div className="flex flex-col border-b border-zinc-300 py-2 focus-within:border-zinc-800 transition-colors duration-200">
               <label className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase mb-1">
                 Email Address
@@ -128,7 +125,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password Field Group */}
             <div className="flex flex-col border-b border-zinc-300 py-2 focus-within:border-zinc-800 transition-colors duration-200">
               <div className="flex justify-between items-center mb-1">
                 <label className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
@@ -152,21 +148,45 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Action Form Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 py-4 bg-[#413126] text-white text-xs font-semibold uppercase tracking-widest rounded-sm hover:bg-[#534033] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Signing In..." : "Sign In"} {!loading && <span>→</span>}
-            </button>
+            <div className="space-y-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full mt-2 py-4 bg-[#413126] text-white text-xs font-semibold uppercase tracking-widest rounded-sm hover:bg-[#534033] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Signing In..." : "Sign In"}{" "}
+                {!loading && <span>→</span>}
+              </button>
+
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-zinc-200"></div>
+                <span className="flex-shrink mx-4 text-[10px] uppercase tracking-widest text-zinc-400 font-medium">
+                  Or
+                </span>
+                <div className="flex-grow border-t border-zinc-200"></div>
+              </div>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleGoogleAuth}
+                className="w-full py-3.5 bg-white border border-zinc-300 text-zinc-700 text-xs font-semibold uppercase tracking-widest rounded-sm hover:bg-zinc-50 hover:border-zinc-400 transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.11C18.28 1.845 15.548 1 12.24 1 5.48 1 0 6.48 0 13s5.48 12 12.24 12c7.06 0 11.758-4.935 11.758-11.89 0-.802-.083-1.413-.183-1.825H12.24z"
+                  />
+                </svg>
+                Continue with Google
+              </button>
+            </div>
           </form>
 
-          {/* Footer Navigation Link */}
           <footer className="mt-12 text-center text-xs text-zinc-600 font-light">
             New to Aureum Naturals?{" "}
             <Link
-              href="/signup"
+              href={signupUrl}
               className="font-semibold text-zinc-900 hover:underline"
             >
               Create an Account

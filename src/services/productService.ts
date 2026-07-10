@@ -12,6 +12,17 @@ export interface Product {
   images: string[];
   ratings?: number;
   numReviews?: number;
+  reviews?: Array<{
+    _id: string;
+    rating: number;
+    comment: string;
+    user?: {
+      firstName: string;
+      lastName?: string;
+      email: string;
+    };
+    createdAt?: string;
+  }>;
   createdAt?: string;
   updatedAt?: string;
 }
