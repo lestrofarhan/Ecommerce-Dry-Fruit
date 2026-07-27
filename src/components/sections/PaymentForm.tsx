@@ -24,8 +24,8 @@ const PAYMENT_OPTIONS: {
 }[] = [
   {
     id: "Stripe",
-    label: "Credit / Debit Card",
-    subtitle: "Visa, MasterCard, Amex — powered by Stripe",
+    label: "Stripe",
+    subtitle: "Credit / Debit Card via Stripe",
     icon: <CreditCard className="w-4 h-4 text-zinc-500 stroke-[1.5]" />,
   },
   {
@@ -108,7 +108,6 @@ export function PaymentForm({
             </label>
             <input
               type="text"
-              required
               placeholder="0000 0000 0000 0000"
               value={cardInfo.cardNumber}
               onChange={(e) => updateCardField("cardNumber", e.target.value)}
@@ -122,7 +121,6 @@ export function PaymentForm({
               </label>
               <input
                 type="text"
-                required
                 placeholder="MM/YY"
                 value={cardInfo.expiry}
                 onChange={(e) => updateCardField("expiry", e.target.value)}
@@ -135,7 +133,6 @@ export function PaymentForm({
               </label>
               <input
                 type="text"
-                required
                 placeholder="123"
                 value={cardInfo.cvc}
                 onChange={(e) => updateCardField("cvc", e.target.value)}

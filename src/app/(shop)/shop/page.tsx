@@ -44,7 +44,7 @@ export default async function ShopPage() {
     console.error("Failed to pre-fetch products on server for ISR:", error);
   }
 
-  console.log("Initial products for ShopPage:", initialProducts);
+  // console.log("Initial products for ShopPage:", initialProducts);
 
   return (
     <ShopClient

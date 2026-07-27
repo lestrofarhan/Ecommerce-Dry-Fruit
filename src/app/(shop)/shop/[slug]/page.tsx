@@ -91,6 +91,7 @@ export default function ProductDetailPage({ params }: PageProps) {
     if (!product) return;
     addItem({
       id: product.slug,
+      _id: product._id,
       name: product.name,
       price: product.salePrice || product.originalPrice,
       imageSrc: product.images?.[0] || "/product-page-pic.png",
@@ -106,6 +107,7 @@ export default function ProductDetailPage({ params }: PageProps) {
     if (!product) return;
     addItem({
       id: product.slug,
+      _id: product._id,
       name: product.name,
       price: product.salePrice || product.originalPrice,
       imageSrc: product.images?.[0] || "/product-page-pic.png",

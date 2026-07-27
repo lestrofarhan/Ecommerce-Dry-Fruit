@@ -10,16 +10,41 @@ import {
   OrderSummary,
   CheckoutProduct,
 } from "@/components/sections/CheckoutOrderSummary";
-import { useCart } from "@/context/CartContext";
+import { CartItem, useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { ShoppingBag, Loader2 } from "lucide-react";
-import axiosInstance from "@/lib/axios";
+import {
+  BackendPaymentResponse,
+  createCheckoutOrder,
+  initiatePayment,
+} from "@/services/paymentService";
+import { productService } from "@/services/productService";
 
 interface CardData {
   cardNumber: string;
   expiry: string;
   cvc: string;
 }
+
+type CheckoutCartItem = CartItem & {
+  databaseId?: string;
+  category?: string;
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === "object" && error !== null) {
+    const maybeError = error as {
+      response?: { data?: { message?: string } };
+      message?: string;
+    };
+
+    return maybeError.response?.data?.message || maybeError.message;
+  }
+
+  return undefined;
+};
+
+const isMongoObjectId = (value?: string) => /^[a-f\d]{24}$/i.test(value || "");
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -28,6 +53,7 @@ export default function CheckoutPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Stripe");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
 
   const [shippingInfo, setShippingInfo] = useState({
     fullName: "",
@@ -42,8 +68,6 @@ export default function CheckoutPage() {
     expiry: "",
     cvc: "",
   });
-  
-  console.log("Submitting checkout with data:", items);
   // Protect route based on current auth loading state
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -62,21 +86,35 @@ export default function CheckoutPage() {
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (isSubmitting) return;
+    setCheckoutError("");
 
     setIsSubmitting(true);
 
     try {
-      const checkoutPayload = {
-        customerId: user?._id, // Extracted directly from context provider state properties
-        paymentMethod: paymentMethod,
-        shippingInfo: shippingInfo,
-        orderItems: items.map((item: any) => {
-          // Fallback extraction: Ensures database 24-character ObjectId is passed
-          const trueProductId = item._id || item.databaseId || item.id;
+      if (!user?._id) {
+        throw new Error("Please sign in again before placing your order.");
+      }
+
+      const resolvedOrderItems = await Promise.all(
+        items.map(async (cartItem) => {
+          const item = cartItem as CheckoutCartItem;
+          let productId = item._id || item.databaseId;
+
+          if (!isMongoObjectId(productId)) {
+            const productResponse = await productService.getProductBySlug(item.id);
+            productId = productResponse.product?._id;
+          }
+
+          if (!isMongoObjectId(productId)) {
+            throw new Error(
+              `Unable to resolve product reference for "${item.name}". Please remove it from cart and add it again.`,
+            );
+          }
 
           return {
-            productId: trueProductId,
+            productId,
             name: item.name,
             quantity: item.quantity,
             price: item.price,
@@ -84,44 +122,99 @@ export default function CheckoutPage() {
             category: item.category || "",
           };
         }),
+      );
+
+      const checkoutPayload = {
+        customerId: user._id,
+        paymentMethod: paymentMethod,
+        shippingInfo: shippingInfo,
+        orderItems: resolvedOrderItems,
       };
 
-      // Calls endpoint matching base dynamic URLs routes definitions
-      const response = await axiosInstance.post("/orders/", checkoutPayload);
-      console.log("Checkout submission response:", response.data);
-      const { success, gatewayData } = response.data;
+      const response = await createCheckoutOrder(checkoutPayload);
+      const { success, payment, gatewayData, orderId } = response;
+      let paymentResponse = (payment || gatewayData) as
+        | BackendPaymentResponse
+        | undefined;
 
       if (success) {
-        // Clear active client-side cart states immediately upon validation completion
-        clearCart();
-
-        if (paymentMethod === "COD") {
-          router.push("/checkout/success");
-        } else {
-          // Handle payment gateway url routing structures fallback checks
-          const checkoutUrl =
-            gatewayData?.checkoutUrl ||
-            gatewayData?.paymentUrl ||
-            gatewayData?.redirectUrl;
-
-          if (checkoutUrl) {
-            window.location.href = checkoutUrl;
-          } else {
-            throw new Error(
-              "Payment gateway failed to provide a valid checkout session URL.",
-            );
-          }
+        if (!paymentResponse && orderId) {
+          paymentResponse = await initiatePayment(orderId, paymentMethod);
         }
+
+        sessionStorage.setItem(
+          "lastCheckout",
+          JSON.stringify({
+            orderId: paymentResponse?.orderId || orderId,
+            paymentId: paymentResponse?.paymentId,
+            paymentMethod,
+          }),
+        );
+        clearCart();
+        await handlePaymentResponse(paymentResponse);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Checkout submission processing halted:", error);
-      alert(
-        error.response?.data?.message ||
+      setCheckoutError(
+        getErrorMessage(error) ||
           "An unexpected error occurred while placing your order. Please check your fields and try again.",
       );
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const submitHostedGatewayForm = (paymentResponse: BackendPaymentResponse) => {
+    if (!paymentResponse.gatewayUrl || !paymentResponse.payload) {
+      throw new Error(
+        `${paymentResponse.provider || paymentMethod} did not return a valid gateway request.`,
+      );
+    }
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = paymentResponse.gatewayUrl;
+    form.style.display = "none";
+
+    Object.entries(paymentResponse.payload).forEach(([name, value]) => {
+      if (value === undefined || value === null) return;
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = String(value);
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  const handlePaymentResponse = async (paymentResponse?: BackendPaymentResponse) => {
+    if (!paymentResponse) {
+      throw new Error("Payment initialization response was missing.");
+    }
+
+    const query = `orderId=${paymentResponse.orderId}&paymentId=${paymentResponse.paymentId || ""}`;
+
+    if (paymentMethod === "COD" || paymentResponse.paymentStatus === "cod") {
+      router.push(`/checkout/success?${query}`);
+      return;
+    }
+
+    if (paymentResponse.redirectUrl) {
+      window.location.href = paymentResponse.redirectUrl;
+      return;
+    }
+
+    if (paymentResponse.gatewayUrl && paymentResponse.payload) {
+      submitHostedGatewayForm(paymentResponse);
+      return;
+    }
+
+    throw new Error(
+      paymentResponse.message ||
+        "Payment gateway failed to provide a valid checkout URL.",
+    );
   };
 
   // 1. Initial Authentication Lifecycle Verification Spinner UI
@@ -176,6 +269,12 @@ export default function CheckoutPage() {
         >
           {/* Form Fields UI wrappers */}
           <div className="lg:col-span-2 space-y-12">
+            {checkoutError && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700 font-light text-left">
+                {checkoutError}
+              </div>
+            )}
+
             <ShippingForm data={shippingInfo} onChange={setShippingInfo} />
 
             <PaymentForm

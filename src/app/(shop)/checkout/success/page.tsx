@@ -1,15 +1,102 @@
 // app/(shop)/checkout/success/page.tsx
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, ShoppingBag, Truck } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Check, Loader2, ShoppingBag, Truck } from "lucide-react";
+import {
+  CheckoutOrderDetails,
+  getOrderDetails,
+  verifyStripeSession,
+} from "@/services/paymentService";
+
+interface StoredCheckout {
+  orderId?: string;
+  paymentId?: string;
+}
+
+const getErrorMessage = (error: unknown) => {
+  if (typeof error === "object" && error !== null) {
+    const maybeError = error as {
+      response?: { data?: { message?: string } };
+      message?: string;
+    };
+
+    return maybeError.response?.data?.message || maybeError.message;
+  }
+
+  return undefined;
+};
 
 export default function OrderSuccessPage() {
-  // Static placeholder properties matching your explicit layout context values
+  const searchParams = useSearchParams();
+  const [orderData, setOrderData] = useState<CheckoutOrderDetails | null>(null);
+  const [loadingOrder, setLoadingOrder] = useState(false);
+  const [orderError, setOrderError] = useState("");
+
+  const fallbackCheckout = useMemo(() => {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const stored = sessionStorage.getItem("lastCheckout");
+      return stored ? (JSON.parse(stored) as StoredCheckout) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const orderId = searchParams.get("orderId") || fallbackCheckout?.orderId;
+  const paymentId = searchParams.get("paymentId") || fallbackCheckout?.paymentId;
+  const stripeSessionId = searchParams.get("session_id");
+
+  useEffect(() => {
+    if (!orderId) return;
+
+    let cancelled = false;
+    let stripeVerified = false;
+
+    const fetchOrder = async () => {
+      setLoadingOrder(true);
+      setOrderError("");
+
+      try {
+        if (stripeSessionId && !stripeVerified) {
+          stripeVerified = true;
+          await verifyStripeSession({
+            sessionId: stripeSessionId,
+            paymentId: paymentId || undefined,
+            orderId,
+          });
+        }
+
+        const order = await getOrderDetails(orderId);
+        if (!cancelled) setOrderData(order);
+      } catch (error: unknown) {
+        if (!cancelled) {
+          setOrderError(
+            getErrorMessage(error) || "Unable to refresh order details.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoadingOrder(false);
+      }
+    };
+
+    fetchOrder();
+    const refreshTimer = window.setTimeout(fetchOrder, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(refreshTimer);
+    };
+  }, [orderId, paymentId, stripeSessionId]);
+
   const orderDetails = {
-    orderNumber: "#AN-82931405",
-    estimatedDelivery: "Oct 24 - Oct 27, 2024",
+    orderNumber: orderData?.orderNo || (orderId ? `#${orderId.slice(-6)}` : "Processing"),
+    estimatedDelivery: "3 - 5 business days",
+    paymentStatus: orderData?.paymentId?.status,
   };
 
   return (
@@ -46,7 +133,11 @@ export default function OrderSuccessPage() {
               Order Number
             </span>
             <span className="text-sm font-mono text-zinc-800 font-medium">
-              {orderDetails.orderNumber}
+              {loadingOrder ? (
+                <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+              ) : (
+                orderDetails.orderNumber
+              )}
             </span>
           </div>
           <div className="space-y-1 pl-6">
@@ -58,6 +149,13 @@ export default function OrderSuccessPage() {
             </span>
           </div>
         </div>
+
+        {(orderDetails.paymentStatus || orderError) && (
+          <p className="text-[11px] font-light text-zinc-500">
+            {orderError ||
+              `Payment status: ${String(orderDetails.paymentStatus).replace("_", " ")}`}
+          </p>
+        )}
 
         {/* Centered Creative Ambient Product Banner Component */}
         <div className="relative aspect-[21/9] w-full rounded-xl overflow-hidden border border-zinc-200/40 shadow-sm group">
